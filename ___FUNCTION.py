@@ -115,6 +115,28 @@ def odczytaj_tryb_pracy(narzedzie):
     else:
         messagebox.showerror("Błąd", f"Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
         return None
+
+def ustaw_stan_procesu(stan):
+    """ Ustawia aktualny proces w pliku JSON (np. 'M6', 'POMIAR' lub None). """
+    try:
+        with open(JSON_FILE, "r+") as f:
+            data = json.load(f)
+            data["aktywny_proces"] = stan
+            f.seek(0)
+            json.dump(data, f, indent=4)
+            f.truncate()
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("Błąd dostępu do pliku JSON!")
+
+def pobierz_stan_procesu():
+    """ Pobiera aktualny stan procesu z pliku JSON. """
+    try:
+        with open(JSON_FILE, "r") as f:
+            data = json.load(f)
+        return data.get("aktywny_proces", None)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+        
 #-----------------------------------------------------------
 # Lista programów
 #-----------------------------------------------------------
