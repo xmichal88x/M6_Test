@@ -72,6 +72,14 @@ def set_digital_output(pin_tuple, state):
 # Operacje na json
 #-----------------------------------------------------------
 
+import json
+
+JSON_FILE = "narzedzia.json"
+
+# Mapowanie wartości liczbowych na nazwy trybu pracy
+TRYB_PRACY_MAP = {0: "Dół", 1: "Góra"}
+TRYB_PRACY_REVERSE = {"Dół": 0, "Góra": 1}
+
 def wczytaj_ustawienia():
     """Wczytuje ustawienia z JSON i konwertuje wartości na nazwy."""
     try:
