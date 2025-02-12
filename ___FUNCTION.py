@@ -74,7 +74,8 @@ def set_digital_output(pin_tuple, state):
 
 import json
 
-JSON_FILE = "narzedzia.json"
+JSON_FILE = "narzedzia.json"   # Plik do przechowywania parametrów narzędzi
+PROCESY_FILE = "procesy.json"  # Plik do przechowywania stanu procesu (M6, pomiar)
 
 # Mapowanie wartości liczbowych na nazwy trybu pracy
 TRYB_PRACY_MAP = {0: "Dół", 1: "Góra"}
@@ -92,6 +93,13 @@ def wczytaj_ustawienia():
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
+def zapisz_ustawienia(data):
+    """Zamienia nazwy trybów na wartości 0/1 i zapisuje do JSON."""
+    for tool, params in data.items():
+        params["tryb_pracy"] = TRYB_PRACY_REVERSE.get(params["tryb_pracy"], 0)
+    with open(JSON_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
 def odczytaj_kieszen(narzedzie):
     """Odczytuje numer kieszeni dla podanego narzędzia z pliku JSON."""
     data = wczytaj_ustawienia()  # Wczytuje dane z pliku JSON
@@ -103,6 +111,15 @@ def odczytaj_kieszen(narzedzie):
     else:
         messagebox.showerror("Błąd", f"Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
         return None
+
+def ustaw_kieszen(tool, kieszen):
+    """Zapisuje numer kieszeni dla narzędzia."""
+    data = wczytaj_ustawienia()
+    if str(tool) in data:
+        data[str(tool)]["kieszen"] = kieszen
+    else:
+        data[str(tool)] = {"tryb_pracy": "Dół", "kieszen": kieszen}  # Domyślny tryb pracy
+    zapisz_ustawienia(data)
 
 def odczytaj_tryb_pracy(narzedzie):
     """Odczytuje tryb pracy dla podanego narzędzia z pliku JSON."""
@@ -116,26 +133,42 @@ def odczytaj_tryb_pracy(narzedzie):
         messagebox.showerror("Błąd", f"Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
         return None
 
-def ustaw_stan_procesu(stan):
-    """ Ustawia aktualny proces w pliku JSON (np. 'M6', 'POMIAR' lub None). """
-    try:
-        with open(JSON_FILE, "r+") as f:
-            data = json.load(f)
-            data["aktywny_proces"] = stan
-            f.seek(0)
-            json.dump(data, f, indent=4)
-            f.truncate()
-    except (FileNotFoundError, json.JSONDecodeError):
-        print("Błąd dostępu do pliku JSON!")
+def ustaw_tryb_pracy(tool, tryb):
+    """Zapisuje nowy tryb pracy dla narzędzia."""
+    data = wczytaj_ustawienia()
+    if str(tool) in data:
+        data[str(tool)]["tryb_pracy"] = tryb
+    else:
+        data[str(tool)] = {"tryb_pracy": tryb, "kieszen": 0}  # Domyślnie 0, jeśli brak danych
+    zapisz_ustawienia(data)
+
+import json
+
+PROCESY_FILE = "procesy.json"  # Nowy plik do przechowywania stanu procesu
 
 def pobierz_stan_procesu():
     """ Pobiera aktualny stan procesu z pliku JSON. """
     try:
-        with open(JSON_FILE, "r") as f:
+        with open(PROCESY_FILE, "r") as f:
             data = json.load(f)
         return data.get("aktywny_proces", None)
     except (FileNotFoundError, json.JSONDecodeError):
-        return None
+        return None  # Jeśli plik nie istnieje lub jest uszkodzony, zwróć None
+
+def ustaw_stan_procesu(stan):
+    """ Ustawia aktualny proces w pliku JSON (np. 'M6', 'POMIAR' lub 'None'). """
+    try:
+        with open(PROCESY_FILE, "r+") as f:
+            data = json.load(f)  # Wczytaj aktualne dane
+            data["aktywny_proces"] = stan  # Ustaw nowy stan
+            f.seek(0)  # Przesuń wskaźnik na początek pliku
+            json.dump(data, f, indent=4)  # Nadpisz dane
+            f.truncate()  # Usuń pozostałości po poprzednim zapisie
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("Błąd dostępu do pliku JSON! Tworzę nowy plik...")
+        with open(PROCESY_FILE, "w") as f:
+            json.dump({"aktywny_proces": stan}, f, indent=4)  # Tworzymy nowy plik
+
         
 #-----------------------------------------------------------
 # Lista programów
