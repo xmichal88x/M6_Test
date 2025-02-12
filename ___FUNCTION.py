@@ -109,7 +109,7 @@ def odczytaj_kieszen(narzedzie):
         kieszen = data[str(narzedzie)]["kieszen"]  # Pobiera numer kieszeni
         return kieszen
     else:
-        messagebox.showerror("Błąd", f"Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
+        print(f"❌ Błąd: Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
         return None
 
 def ustaw_kieszen(tool, kieszen):
@@ -130,7 +130,7 @@ def odczytaj_tryb_pracy(narzedzie):
         tryb_pracy = data[str(narzedzie)]["tryb_pracy"]  # Pobiera tryb pracy
         return tryb_pracy
     else:
-        messagebox.showerror("Błąd", f"Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
+        print(f"❌ Błąd: Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
         return None
 
 def ustaw_tryb_pracy(tool, tryb):
