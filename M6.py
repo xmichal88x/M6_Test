@@ -55,7 +55,9 @@ msg_magazine_get        = "⚠️ Brak narzędzia w magazynie narzędzi"
 #-----------------------------------------------------------
 
 def main():
-    
+
+    ustaw_stan_procesu("M6")  # Oznaczamy, że wymiana narzędzia jest aktywna
+
     #-----------------------------------------------------------
     # Perform pre-checks
     #-----------------------------------------------------------
@@ -256,6 +258,8 @@ def main():
         aggregate_up()
     elif tryb_pracy == "Dół":
         aggregate_down()
+
+    ustaw_stan_procesu(None)
     
     # Zamknij mgazyn narzędzi
     close_magazine()
