@@ -1,4 +1,5 @@
-from ___CONF import * 
+from ___CONF import *
+from ___FUNCTION import * 
 import time   
 import sys
 import json
@@ -12,6 +13,22 @@ TRYB_PRACY_REVERSE = {"Dół": 0, "Góra": 1}
 timezone = time.localtime() 
 
 mode = "debug" # normal or debug (for more info output)
+
+#-----------------------------------------------------------
+# Prep
+#-----------------------------------------------------------
+
+# Store some info for later use
+tool_old_id     =  d.getSpindleToolNumber()
+tool_new_id     =  d.getSelectedToolNumber()
+tool_new_length =  d.getToolLength(tool_new_id)
+machine_pos     =  d.getPosition(CoordMode.Machine)
+# spindle_speed =  d.getSpindleSpeed()
+spindle_state   =  d.getSpindleState()
+
+# if debug is enabled, output some helpful information
+if mode == "debug":
+    print(f"{tool_old_id}  -> {tool_new_id}")
 
 #-----------------------------------------------------------
 # Check status of pin 
