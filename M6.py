@@ -2,13 +2,6 @@ from ___CONF import *
 from ___FUNCTION import * 
 import time   
 import sys
-import json
-
-JSON_FILE = "narzedzia.json"
-
-# Mapowanie wartości liczbowych na nazwy trybu pracy
-TRYB_PRACY_MAP = {0: "Dół", 1: "Góra"}
-TRYB_PRACY_REVERSE = {"Dół": 0, "Góra": 1}
 
 timezone = time.localtime() 
 
