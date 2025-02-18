@@ -142,10 +142,6 @@ def ustaw_tryb_pracy(tool, tryb):
         data[str(tool)] = {"tryb_pracy": tryb, "kieszen": 0}  # Domyślnie 0, jeśli brak danych
     zapisz_ustawienia(data)
 
-import json
-
-PROCESY_FILE = "procesy.json"  # Nowy plik do przechowywania stanu procesu
-
 def pobierz_stan_procesu():
     """ Pobiera aktualny stan procesu z pliku JSON. """
     try:
