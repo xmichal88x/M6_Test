@@ -638,14 +638,15 @@ def main():
         t_curtain_up = threading.Thread(target=curtain_up, name="CurtainUpThread")
         t_curtain_down = threading.Thread(target=curtain_down, name="CurtainDownThread")
 
-        ensure_aggregate_down()
+        if not get_digital_input(IN_AGGREGATE_DOWN):
+            aggregate_down()
         
         # Uruchom wątki
         t_magazine_open.start()
         t_curtain_up.start()
 
         # Poczekaj na zakończenie z timeout
-        t_aggregate_down.join(timeout=10)
+        # t_aggregate_down.join(timeout=10)
         t_magazine_open.join(timeout=10)
         t_curtain_up.join(timeout=10)
 
