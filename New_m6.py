@@ -567,6 +567,7 @@ def main():
             print("Rozpoczynam równoległe operacje...")
         
         t_aggregate_down = threading.Thread(target=aggregate_down, name="AggregateDownThread")
+        t_aggregate_up = threading.Thread(target=aggregate_up, name="AggregateUpThread")
         t_magazine_open = threading.Thread(target=open_magazine, name="MagazineOpenThread")
         t_magazine_close = threading.Thread(target=close_magazine, name="MagazineCloseThread")
         t_curtain_up = threading.Thread(target=curtain_up, name="CurtainDownThread")
