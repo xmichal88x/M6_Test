@@ -567,8 +567,10 @@ def main():
             print("Rozpoczynam równoległe operacje...")
         
         t_aggregate_down = threading.Thread(target=aggregate_down, name="AggregateDownThread")
-        t_magazine_open = threading.Thread(target=open_magazine, name="MagazineThread") 
-        t_curtain_up = threading.Thread(target=curtain_up, name="CurtainThread")
+        t_magazine_open = threading.Thread(target=open_magazine, name="MagazineOpenThread")
+        t_magazine_close = threading.Thread(target=close_magazine, name="MagazineCloseThread")
+        t_curtain_up = threading.Thread(target=curtain_up, name="CurtainDownThread")
+        t_curtain_down = threading.Thread(target=curtain_down, name="CurtainDownThread")
 
         # Uruchom wątki
         t_aggregate_down.start()
@@ -756,26 +758,58 @@ def main():
     
         # Dezaktywuje pozycję wymiany
         deactivate_tool_change_position()
+
         
+            
         # Opuść szczotkę
-        curtain_down()
+        t_curtain_down.start()
     
         # Ustaw tryb pracy dla narzędzia
         if tryb_pracy is not None:
             print(f"Tryb pracy dla narzędzia T{tool_new_id}: {tryb_pracy}")
         if tryb_pracy == "Góra":
-            aggregate_up()
+            t_aggregate_up.start()
         elif tryb_pracy == "Dół":
-            aggregate_down()
+            t_aggregate_down.start()
         
         # Zamknij mgazyn narzędzi
-        close_magazine()
+        t_magazine_close.start()
         
         # Przywrócenie softlimitów
         d.ignoreAllSoftLimits(False)
         print("Softlimity przywrócone.")
         throwMessage(msg_m6_end, "")
-      
+        
+        # Poczekaj na zakończenie z timeout
+        if tryb_pracy == "Góra":
+            t_aggregate_up.join(timeout=10)
+        elif tryb_pracy == "Dół":
+            t_aggregate_down.join(timeout=10)
+        t_magazine_close.join(timeout=10)
+        t_curtain_down.join(timeout=10)
+
+        # Sprawdź czy wątki się zakończyły
+        if tryb_pracy == "Góra":
+            if t_aggregate_up.is_alive():
+                print("OSTRZEŻENIE: Wątek agregatu nie zakończył się w czasie")
+                error_event.set()
+            elif t_aggregate_down.is_alive():
+                print("OSTRZEŻENIE: Wątek agregatu nie zakończył się w czasie")
+                error_event.set()
+            
+        if t_magazine_close.is_alive():
+            print("OSTRZEŻENIE: Wątek magazynu nie zakończył się w czasie")
+            error_event.set()
+        if t_curtain_down.is_alive():
+            print("OSTRZEŻENIE: Wątek szczotki nie zakończył się w czasie")  
+            error_event.set()
+        
+        # Jeśli wystąpiły błędy, zatrzymaj wykonanie
+        if error_event.is_set():
+            emergency_stop()
+            return
+
+    
     except Exception as e:
         print(f"Krytyczny błąd w głównej pętli: {e}")
         d.stopTrajectory()
