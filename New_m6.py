@@ -494,6 +494,71 @@ def emergency_stop():
         print(f"  - {msg}")
     d.stopTrajectory()
 
+def ensure_aggregate_down():
+    """
+    Sprawdza czy agregat jest w dolnej pozycji, jeśli nie - opuszcza go z użyciem wątków.
+    Zwraca True jeśli agregat jest/został opuszczony, False w przypadku błędu.
+    """
+    try:
+        if mode == "debug":
+            print("Sprawdzam pozycję agregatu...")
+        
+        # Sprawdź czy agregat jest już w dolnej pozycji
+        aggregate_down_state = get_digital_input(IN_AGGREGATE_DOWN)
+        
+        if aggregate_down_state is None:
+            print("Błąd: Nie można odczytać stanu agregatu")
+            return False
+        
+        if aggregate_down_state:
+            if mode == "debug":
+                print("Agregat już jest w dolnej pozycji.")
+            return True
+        
+        # Agregat nie jest w dolnej pozycji - trzeba go opuścić
+        if mode == "debug":
+            print("Agregat nie jest w dolnej pozycji. Rozpoczynam opuszczanie...")
+        
+        # Utwórz i uruchom wątek do opuszczenia agregatu
+        t_aggregate_down = threading.Thread(
+            target=aggregate_down, 
+            name="EnsureAggregateDownThread"
+        )
+        t_aggregate_down.start()
+        
+        # Poczekaj na zakończenie z timeout
+        t_aggregate_down.join(timeout=10)
+        
+        # Sprawdź czy wątek się zakończył w czasie
+        if t_aggregate_down.is_alive():
+            print("OSTRZEŻENIE: Wątek opuszczania agregatu nie zakończył się w czasie")
+            error_event.set()
+            return False
+        
+        # Sprawdź czy wystąpiły błędy podczas operacji
+        if error_event.is_set() and error_messages:
+            print("Błąd podczas opuszczania agregatu:")
+            for msg in error_messages[-3:]:  # Pokaż ostatnie 3 błędy
+                print(f"  - {msg}")
+            return False
+        
+        # Finalnie sprawdź czy agregat jest teraz w dolnej pozycji
+        final_state = get_digital_input(IN_AGGREGATE_DOWN)
+        if final_state:
+            if mode == "debug":
+                print("Agregat został pomyślnie opuszczony.")
+            return True
+        else:
+            print("Błąd: Agregat nie osiągnął dolnej pozycji mimo wykonania operacji")
+            return False
+            
+    except Exception as e:
+        error_msg = f"Błąd w ensure_aggregate_down(): {e}"
+        print(error_msg)
+        error_messages.append(error_msg)
+        error_event.set()
+        return False
+
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 # M6 START
@@ -573,8 +638,9 @@ def main():
         t_curtain_up = threading.Thread(target=curtain_up, name="CurtainUpThread")
         t_curtain_down = threading.Thread(target=curtain_down, name="CurtainDownThread")
 
+        ensure_aggregate_down()
+        
         # Uruchom wątki
-        t_aggregate_down.start()
         t_magazine_open.start()
         t_curtain_up.start()
 
