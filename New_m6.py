@@ -775,14 +775,7 @@ def main():
             t_aggregate_up.start()
         elif tryb_pracy == "Dół":
             t_aggregate_down.start()
-        
-        
-        
-        # Przywrócenie softlimitów
-        d.ignoreAllSoftLimits(False)
-        print("Softlimity przywrócone.")
-        throwMessage(msg_m6_end, "")
-        
+            
         # Poczekaj na zakończenie z timeout
         t_curtain_down.join(timeout=10)
         t_magazine_close.join(timeout=10)
@@ -791,9 +784,7 @@ def main():
             t_aggregate_up.join(timeout=10)
         elif tryb_pracy == "Dół":
             t_aggregate_down.join(timeout=10)
-       
         
-
         # Sprawdź czy wątki się zakończyły
         if tryb_pracy == "Góra":
             if t_aggregate_up.is_alive():
@@ -809,6 +800,17 @@ def main():
         if t_curtain_down.is_alive():
             print("OSTRZEŻENIE: Wątek szczotki nie zakończył się w czasie")  
             error_event.set()
+            
+        # Przywrócenie softlimitów
+        d.ignoreAllSoftLimits(False)
+        print("Softlimity przywrócone.")
+        throwMessage(msg_m6_end, "")
+        
+        
+       
+        
+
+        
         
         # Jeśli wystąpiły błędy, zatrzymaj wykonanie
         if error_event.is_set():
