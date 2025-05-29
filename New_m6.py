@@ -570,7 +570,7 @@ def main():
         t_aggregate_up = threading.Thread(target=aggregate_up, name="AggregateUpThread")
         t_magazine_open = threading.Thread(target=open_magazine, name="MagazineOpenThread")
         t_magazine_close = threading.Thread(target=close_magazine, name="MagazineCloseThread")
-        t_curtain_up = threading.Thread(target=curtain_up, name="CurtainDownThread")
+        t_curtain_up = threading.Thread(target=curtain_up, name="CurtainUpThread")
         t_curtain_down = threading.Thread(target=curtain_down, name="CurtainDownThread")
 
         # Uruchom wątki
@@ -764,6 +764,9 @@ def main():
             
         # Opuść szczotkę
         t_curtain_down.start()
+        
+        # Zamknij mgazyn narzędzi
+        t_magazine_close.start()
     
         # Ustaw tryb pracy dla narzędzia
         if tryb_pracy is not None:
@@ -773,8 +776,7 @@ def main():
         elif tryb_pracy == "Dół":
             t_aggregate_down.start()
         
-        # Zamknij mgazyn narzędzi
-        t_magazine_close.start()
+        
         
         # Przywrócenie softlimitów
         d.ignoreAllSoftLimits(False)
@@ -782,12 +784,15 @@ def main():
         throwMessage(msg_m6_end, "")
         
         # Poczekaj na zakończenie z timeout
+        t_curtain_down.join(timeout=10)
+        t_magazine_close.join(timeout=10)
+        
         if tryb_pracy == "Góra":
             t_aggregate_up.join(timeout=10)
         elif tryb_pracy == "Dół":
             t_aggregate_down.join(timeout=10)
-        t_magazine_close.join(timeout=10)
-        t_curtain_down.join(timeout=10)
+       
+        
 
         # Sprawdź czy wątki się zakończyły
         if tryb_pracy == "Góra":
