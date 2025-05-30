@@ -757,11 +757,13 @@ def main():
     
         # Ustaw tryb pracy dla narzędzia
         if tryb_pracy == "Góra":
-            t_aggregate_up.start()
-            active_threads.append(t_aggregate_up)
+            if not get_digital_input(IN_AGGREGATE_UP):
+                t_aggregate_up.start()
+                active_threads.append(t_aggregate_up)
         elif tryb_pracy == "Dół":
-            t_aggregate_down.start()
-            active_threads.append(t_aggregate_down)
+            if not get_digital_input(IN_AGGREGATE_DOWN):
+                t_aggregate_down.start()
+                active_threads.append(t_aggregate_down)
             
         # Poczekaj na wszystkie aktywne wątki
         timeout = 10    
