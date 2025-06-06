@@ -210,16 +210,45 @@ def odczytaj_tryb_pracy(narzedzie):
 #-----------------------------------------------------------
 
 def check_axes_referenced():
-    axis_to_check = [Axis.X, Axis.Y, Axis.Z]
-    not_referenced_axes = []
-
-    for axis in axis_to_check:
-        if not d.isAxisReferenced(axis):
-            not_referenced_axes.append(axis)
-
-    if not_referenced_axes:
-        msg_axes_referenced = f"🔴 Osi(e) {', '.join([str(axis) for axis in not_referenced_axes])} nie są zbazowane! Uruchom proces bazowania."
-        throwMessage(msg_axes_referenced, "exit")
+    """
+    Sprawdza czy osie są zbazowane według wzorca z check_z_zero_safe
+    """
+    try:
+        axis_to_check = [Axis.X, Axis.Y, Axis.Z]
+        not_referenced_axes = []
+        
+        for axis in axis_to_check:
+            if not d.isAxisReferenced(axis):
+                not_referenced_axes.append(axis)
+        
+        if not_referenced_axes:
+            # Konwertuj nazwy osi na czytelny format
+            axis_names = []
+            for axis in not_referenced_axes:
+                if axis == Axis.X:
+                    axis_names.append("X")
+                elif axis == Axis.Y:
+                    axis_names.append("Y")
+                elif axis == Axis.Z:
+                    axis_names.append("Z")
+                else:
+                    axis_names.append(str(axis))
+            
+            d.setTrajectoryPause(True)
+            msg.err(f"🔴 Osi(e) {', '.join(axis_names)} nie są zbazowane!")
+            msg.info("🔁 Uruchom proces bazowania i wciśnij START.")
+            sys.exit(0)
+            return False
+        else:
+            # msg.info("✅ Wszystkie osie są zbazowane")  # Opcjonalnie
+            return True
+            
+    except Exception as e:
+        d.setTrajectoryPause(True)
+        msg.err(f"❌ Błąd sprawdzania bazowania osi: {str(e)}")
+        msg.info("🔁 Wciśnij START po naprawie błędu.")
+        return False
+        
 
 def curtain_up():
     """POPRAWIONE: Podnosi szczotkę z obsługą wielowątkowości."""
@@ -490,7 +519,9 @@ def emergency_stop():
     print("AWARYJNE ZATRZYMANIE - wykryto błędy:")
     for msg in error_messages:
         print(f"  - {msg}")
-    d.stopTrajectory()
+    d.setTrajectoryPause(True)
+    d.stopTrajectory(True)
+    sys.exit(0)
 
 #-----------------------------------------------------------
 #-----------------------------------------------------------
@@ -528,9 +559,8 @@ def main():
 
     # exit if tool is already in spindle
     if tool_old_id == tool_new_id: 
-        throwMessage(msg_old_equal_new, "")
-        sys.exit(0)
-    
+        throwMessage(msg_old_equal_new, "exit")
+            
     # exit on tool zero
     if tool_new_id == 0: 
         throwMessage(msg_tool_zero, "exit") 
@@ -570,6 +600,9 @@ def main():
         t_magazine_close = threading.Thread(target=close_magazine, name="MagazineCloseThread")
         t_curtain_up = threading.Thread(target=curtain_up, name="CurtainUpThread")
         t_curtain_down = threading.Thread(target=curtain_down, name="CurtainDownThread")
+
+        # Załączenie przedmuchiwania taśmy refleksyjnej
+        set_digital_output(OUT_AIR_CLEAN, True)
         
         # Uruchom wątki
         t_magazine_open.start()
@@ -595,6 +628,9 @@ def main():
             emergency_stop()
             return
 
+        # Wyłączenie przedmuchiwania taśmy refleksyjnej
+        set_digital_output(OUT_AIR_CLEAN, False)
+        
         # Aktywuj pozycję wymiany
         activate_tool_change_position()
         
