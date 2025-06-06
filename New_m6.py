@@ -189,8 +189,10 @@ def odczytaj_kieszen(narzedzie):
         kieszen = data[str(narzedzie)]["kieszen"]
         return kieszen
     else:
-        # POPRAWIONE: Usunięto messagebox.showerror (nie jest dostępne w tym kontekście)
-        print(f"Błąd: Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
+        d.setTrajectoryPause(True)
+        msg.err(f"Narzędzie T{narzedzie} nie znaleziono w pliku JSON.")
+        msg.info(f"Ustaw kieszeń dla narzędzia T{narzedzie}.")
+        throwMessage(f"Błąd: Narzędzie T{narzedzie} nie znaleziono w pliku JSON.", "exit")
         return None
 
 def odczytaj_tryb_pracy(narzedzie):
@@ -201,8 +203,9 @@ def odczytaj_tryb_pracy(narzedzie):
         tryb_pracy = data[str(narzedzie)]["tryb_pracy"]
         return tryb_pracy
     else:
-        # POPRAWIONE: Usunięto messagebox.showerror (nie jest dostępne w tym kontekście)
-        print(f"Błąd: Narzędzie {narzedzie} nie znaleziono w pliku JSON.")
+        msg.err(f"Narzędzie T{narzedzie} nie znaleziono w pliku JSON.")
+        msg.info(f"Ustaw tryb pracy dla narzędzia T{narzedzie}.")
+        throwMessage(f"Błąd: Narzędzie T{narzedzie} nie znaleziono w pliku JSON.", "exit")
         return None
 
 #-----------------------------------------------------------
@@ -235,8 +238,8 @@ def check_axes_referenced():
                     axis_names.append(str(axis))
             
             d.setTrajectoryPause(True)
-            msg.err(f"🔴 Osi(e) {', '.join(axis_names)} nie są zbazowane!")
-            msg.info("🔁 Uruchom proces bazowania i wciśnij START.")
+            msg.err(f"Osi(e) {', '.join(axis_names)} nie są zbazowane!")
+            msg.info("Uruchom proces bazowania i wciśnij START.")
             sys.exit(0)
             return False
         else:
@@ -245,8 +248,8 @@ def check_axes_referenced():
             
     except Exception as e:
         d.setTrajectoryPause(True)
-        msg.err(f"❌ Błąd sprawdzania bazowania osi: {str(e)}")
-        msg.info("🔁 Wciśnij START po naprawie błędu.")
+        msg.err(f"Błąd sprawdzania bazowania osi: {str(e)}")
+        msg.info("Wciśnij START po naprawie błędu.")
         return False
         
 
@@ -268,7 +271,7 @@ def curtain_up():
             return True
         else:
             print("Błąd: Szczotka nie osiągnęła pozycji górnej.")
-            error_event.set()
+            emergency_stop()
             return False
             
     except Exception as e:
@@ -296,7 +299,7 @@ def curtain_down():
             return True
         else:
             print("Błąd: Szczotka nie osiągnęła pozycji dolnej.")
-            error_event.set()
+            emergency_stop()
             return False
             
     except Exception as e:
@@ -324,7 +327,7 @@ def aggregate_up():
             return True
         else:
             print("Błąd: Agregat nie osiągnął pozycji górnej.")
-            error_event.set()
+            emergency_stop()
             return False
             
     except Exception as e:
@@ -352,7 +355,7 @@ def aggregate_down():
             return True
         else:
             print("Błąd: Agregat nie osiągnął pozycji dolnej.")
-            error_event.set()
+            emergency_stop()
             return False
             
     except Exception as e:
@@ -398,7 +401,8 @@ def open_collet():
             return True
         else:
             print("Błąd: Uchwyt narzędzia nie otworzył się.")
-            throwMessage(msg_clamp_error, "exit")
+            throwMessage(msg_clamp_error, "")
+            emergency_stop()
             return False
             
     except Exception as e:
@@ -425,7 +429,8 @@ def close_collet():
         while not error_event.is_set():
             if time.time() - start_time > 5:
                 print("Błąd: Uchwyt narzędzia nie zamknął się.")
-                throwMessage(msg_clamp_error_close, "exit")
+                throwMessage(msg_clamp_error_close, "")
+                emergency_stop()
                 return False
                 
             collet_state = get_digital_input(IN_COLLET_OPEN)
@@ -461,13 +466,13 @@ def open_magazine():
         # Sprawdź osłonę pionową
         if not wait_for_input_with_timeout(IN_Oslona_Pion_Open, 5):
             print("Błąd: Osłona pionowa nie otworzyła się.")
-            error_event.set()
+            emergency_stop()
             return False
 
         # Sprawdź osłonę poziomą
         if not wait_for_input_with_timeout(IN_Oslona_Poz_Open, 5):
             print("Błąd: Osłona pozioma nie otworzyła się.")
-            error_event.set()
+            emergency_stop()
             return False
             
         if mode == "debug":
@@ -520,7 +525,7 @@ def emergency_stop():
     for msg in error_messages:
         print(f"  - {msg}")
     d.setTrajectoryPause(True)
-    d.stopTrajectory(True)
+    d.stopTrajectory()
     sys.exit(0)
 
 #-----------------------------------------------------------
@@ -551,26 +556,36 @@ def main():
     
     # exit if tool is in exception list for auto-tool-change 
     if tool_new_id in conf_tools_special:
+        d.setTrajectoryPause(True)
+        msg.err(msg_tool_special)
         throwMessage(msg_tool_special, "exit")   
     
     # exit if air pressure is too low 
-    if not get_digital_input(IN_PRESSURE):  
-        throwMessage(msg_air_warning, "exit")
+    #if not get_digital_input(IN_PRESSURE):
+        #d.setTrajectoryPause(True)
+        #msg.err(msg_air_warning)
+        #throwMessage(msg_air_warning, "exit")
 
     # exit if tool is already in spindle
     if tool_old_id == tool_new_id: 
         throwMessage(msg_old_equal_new, "exit")
             
     # exit on tool zero
-    if tool_new_id == 0: 
+    if tool_new_id == 0:
+        d.setTrajectoryPause(True)
+        msg.err(msg_tool_zero)        
         throwMessage(msg_tool_zero, "exit") 
     
     # exit if tool is out of range
     if tool_new_pocket_id > TOOLCOUNT:
+        d.setTrajectoryPause(True)
+        msg.err(msg_tool_count)
         throwMessage(msg_tool_count, "exit") 	 
     
     # exit if unknown tool in the holder
     if tool_old_id == 0 and get_digital_input(IN_TOOL_INSIDE):
+        d.setTrajectoryPause(True)
+        msg.err(msg_unknow_tool)
         throwMessage(msg_unknow_tool, "exit")
     
     #-----------------------------------------------------------
@@ -614,20 +629,6 @@ def main():
             t_aggregate_down.start()
             active_threads.append(t_aggregate_down)
                    
-        # Poczekaj na zakończenie z timeout
-        timeout = 10       
-        for i, thread in enumerate(active_threads):
-            thread.join(timeout=timeout)
-            if thread.is_alive():
-                thread_names = ["magazynu", "szczotki", "agregatu"]  # Kolejność musi odpowiadać active_threads
-                print(f"OSTRZEŻENIE: Wątek {thread_names[i]} przekroczył timeout")
-                error_event.set()
-
-        # Jeśli wystąpiły błędy, zatrzymaj wykonanie
-        if error_event.is_set():
-            emergency_stop()
-            return
-
         # Wyłączenie przedmuchiwania taśmy refleksyjnej
         set_digital_output(OUT_AIR_CLEAN, False)
         
@@ -801,24 +802,12 @@ def main():
                 t_aggregate_down.start()
                 active_threads.append(t_aggregate_down)
             
-        # Poczekaj na wszystkie aktywne wątki
-        timeout = 10    
-        for i, thread in enumerate(active_threads):
-            thread.join(timeout=timeout)
-            if thread.is_alive():
-                thread_names = ["szczotki", "magazynu", "agregatu"]
-                print(f"OSTRZEŻENIE: Wątek {thread_names[i]} przekroczył timeout")
-                error_event.set()
-            
+                    
         # Przywrócenie softlimitów
         d.ignoreAllSoftLimits(False)
         print("Softlimity przywrócone.")
         throwMessage(msg_m6_end, "")
     
-        # Jeśli wystąpiły błędy, zatrzymaj wykonanie
-        if error_event.is_set():
-            emergency_stop()
-            return
 
     except Exception as e:
         print(f"Krytyczny błąd w głównej pętli: {e}")
